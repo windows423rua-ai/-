@@ -3,50 +3,80 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>舞台配置図 v13.5</title>
+<title>舞台配置図 v14</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
-body {margin:0;display:flex;height:100vh;font-family:sans-serif;background:#e8e6df;touch-action:none;}
+body {
+margin:0;display:flex;height:100vh;font-family:sans-serif;
+background:#e8e6df;touch-action:none;
+}
 
-#sidebar {width:200px;background:white;border-right:1px solid #ccc;display:flex;flex-direction:column;}
+#sidebar {
+width:200px;background:white;border-right:1px solid #ccc;
+display:flex;flex-direction:column;
+}
 
 .tabs {display:flex;}
-.tab {flex:1;padding:6px;text-align:center;border-bottom:2px solid transparent;cursor:pointer;font-size:12px;}
+.tab {
+flex:1;padding:6px;text-align:center;
+border-bottom:2px solid transparent;cursor:pointer;font-size:12px;
+}
 .tab.active {border-color:#1d9e75;color:#1d9e75;font-weight:bold;}
 
 .inst-list {flex:1;overflow:auto;}
-.inst {padding:6px;font-size:12px;border-bottom:1px solid #eee;cursor:pointer;}
+.inst {
+padding:6px;font-size:12px;border-bottom:1px solid #eee;cursor:pointer;
+}
 .inst.active {background:#1d9e75;color:white;}
 
 #main {flex:1;display:flex;flex-direction:column;}
 
-#toolbar {padding:6px;background:white;border-bottom:1px solid #ccc;display:flex;flex-wrap:wrap;gap:6px;}
+#toolbar {
+padding:6px;background:white;border-bottom:1px solid #ccc;
+display:flex;flex-wrap:wrap;gap:6px;
+}
+
 button {padding:6px;}
 
-#stage {width:960px;height:760px;margin:auto;position:relative;background:white;border:1px solid #aaa;}
+#stage {
+position:relative;
+margin:auto;
+background:white;
+border:1px solid #aaa;
+overflow:hidden;
+}
 
 .stage-grid {
 position:absolute;inset:0;
 background-image:
-linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),
-linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px);
-background-size:30px 30px;
+linear-gradient(rgba(0,0,0,0.06) 1px,transparent 1px),
+linear-gradient(90deg,rgba(0,0,0,0.06) 1px,transparent 1px);
+pointer-events:none;
 }
 
-.elem {position:absolute;}
+.elem {position:absolute;cursor:grab;}
+
 .chair {
-width:26px;height:26px;border-radius:50%;
+width:30px;height:30px;border-radius:50%;
 border:2px solid;
 display:flex;align-items:center;justify-content:center;
 font-size:8px;background:white;
+user-select:none;
 }
 
-.scale {position:absolute;bottom:10px;right:10px;font-size:10px;background:white;padding:4px;border:1px solid #ccc;}
+.scale {
+position:absolute;bottom:10px;right:10px;
+font-size:10px;background:white;
+padding:4px;border:1px solid #ccc;
+}
 
-#arcUI {position:absolute;top:60px;left:220px;background:white;padding:6px;border:1px solid #ccc;}
+#arcUI {
+position:absolute;top:60px;left:220px;
+background:white;padding:6px;border:1px solid #ccc;
+}
 </style>
 </head>
 
@@ -70,7 +100,6 @@ font-size:8px;background:white;
 
 <button onclick="loadPDF()">PDF</button>
 <button onclick="loadImg()">画像</button>
-
 <button onclick="exportPNG()">PNG</button>
 </div>
 
@@ -87,45 +116,44 @@ font-size:8px;background:white;
 </div>
 
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-// ===== 楽器 =====
+// ===== state =====
+let elements=[];
+let tool="select";
+let currentInst={l:"Fl",c:"#e35"};
+let arcPts=[];
+let selected=null;
+
+const baseGrid=30;
+let pdfScale=1;
+
+// ===== UI =====
 const MAIN=[
-{l:"Pic",c:"#e35"},{l:"Fl",c:"#e35"},{l:"Ob",c:"#c44"},
-{l:"B♭Cl",c:"#36a"},{l:"B.Cl",c:"#36a"},
-{l:"A.Sax",c:"#1a8"},{l:"T.Sax",c:"#1a8"},{l:"B.Sax",c:"#1a8"},
-{l:"Tp",c:"#c70"},{l:"Tb",c:"#a84"},
-{l:"Hr",c:"#84a"},{l:"B.Tb",c:"#a84"},
-{l:"Tu",c:"#08a"},{l:"Eu",c:"#08a"},{l:"Stb",c:"#555"}
+{l:"Fl",c:"#e35"},{l:"Ob",c:"#c44"},{l:"Cl",c:"#36a"},
+{l:"Sax",c:"#1a8"},{l:"Tp",c:"#c70"},{l:"Tb",c:"#a84"}
 ];
 
 const OTHER=[
-{l:"Cor Angl.",c:"#c44"},
-{l:"E♭Cl",c:"#36a"},
-{l:"A.Cl",c:"#36a"},
-{l:"CA.Cl",c:"#36a"},
-{l:"CB.Cl",c:"#36a"},
-{l:"S.Sax",c:"#1a8"},
-{l:"PicTp",c:"#c70"},
-{l:"CorTp",c:"#c70"}
+{l:"Cor",c:"#84a"},{l:"Tu",c:"#08a"}
 ];
 
-let currentInst=MAIN[0];
-
 function build(list,id){
- let el=document.getElementById(id);
- list.forEach(i=>{
-  let d=document.createElement("div");
-  d.className="inst";
-  d.textContent=i.l;
-  d.style.color=i.c;
-  d.onclick=()=>{
-    currentInst=i;
-    document.querySelectorAll(".inst").forEach(x=>x.classList.remove("active"));
-    d.classList.add("active");
-  };
-  el.appendChild(d);
- });
+let el=document.getElementById(id);
+list.forEach(i=>{
+let d=document.createElement("div");
+d.className="inst";
+d.textContent=i.l;
+d.style.color=i.c;
+d.onclick=()=>{
+currentInst=i;
+document.querySelectorAll("#"+id+" .inst")
+.forEach(x=>x.classList.remove("active"));
+d.classList.add("active");
+};
+el.appendChild(d);
+});
 }
 
 build(MAIN,"mainList");
@@ -133,132 +161,192 @@ build(OTHER,"otherList");
 document.querySelector(".inst").classList.add("active");
 
 function switchTab(n,el){
- document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
- el.classList.add("active");
- document.getElementById("mainList").style.display=n==="main"?"":"none";
- document.getElementById("otherList").style.display=n==="other"?"":"none";
+document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+el.classList.add("active");
+document.getElementById("mainList").style.display=n==="main"?"":"none";
+document.getElementById("otherList").style.display=n==="other"?"":"none";
 }
 
-// ===== core =====
-const GRID=30;
-let elements=[];
-let tool="select";
-let id=0;
-let arcPts=[];
+// ===== grid =====
+function updateGrid(){
+let g=baseGrid*pdfScale;
+document.querySelector(".stage-grid").style.backgroundSize=
+`${g}px ${g}px`;
+}
 
-function snap(v){return Math.round(v/GRID)*GRID;}
+// ===== snap =====
+function snap(v){
+let g=baseGrid*pdfScale;
+return Math.round(v/g)*g;
+}
 
+// ===== add =====
 function addChair(x,y){
- elements.push({x,y,label:currentInst.l,color:currentInst.c});
+elements.push({x,y,label:currentInst.l,color:currentInst.c});
+render();
 }
 
 // ===== render =====
 function render(){
- stage.querySelectorAll(".elem").forEach(e=>e.remove());
- elements.forEach(el=>{
-  let d=document.createElement("div");
-  d.className="elem";
-  d.style.left=el.x+"px";
-  d.style.top=el.y+"px";
+stage.querySelectorAll(".elem").forEach(e=>e.remove());
 
-  let c=document.createElement("div");
-  c.className="chair";
-  c.textContent=el.label;
-  c.style.borderColor=el.color;
-  c.style.color=el.color;
+elements.forEach((el,i)=>{
+let d=document.createElement("div");
+d.className="elem";
+d.style.left=el.x+"px";
+d.style.top=el.y+"px";
 
-  d.appendChild(c);
-  stage.appendChild(d);
- });
+let c=document.createElement("div");
+c.className="chair";
+c.textContent=el.label;
+c.style.borderColor=el.color;
+c.style.color=el.color;
+
+d.onclick=()=>selected=i;
+
+// drag
+let drag=false;
+d.onmousedown=()=>drag=true;
+document.onmouseup=()=>drag=false;
+
+document.onmousemove=(e)=>{
+if(!drag || selected!==i) return;
+let r=stage.getBoundingClientRect();
+el.x=snap(e.clientX-r.left);
+el.y=snap(e.clientY-r.top);
+render();
+};
+
+c.ondblclick=()=>{
+let v=prompt("編集",el.label);
+if(v){el.label=v;render();}
+};
+
+d.appendChild(c);
+stage.appendChild(d);
+});
 }
 
-// ===== 弧 =====
+// ===== stage click =====
+stage.onclick=e=>{
+let r=stage.getBoundingClientRect();
+let x=snap(e.clientX-r.left);
+let y=snap(e.clientY-r.top);
+
+if(tool==="chair") addChair(x,y);
+
+if(tool==="arc"){
+arcPts.push({x,y});
+if(arcPts.length===3) placeArc();
+}
+};
+
+// ===== arc =====
 function bez(p0,p1,p2,t){
- return {
-  x:(1-t)*(1-t)*p0.x+2*(1-t)*t*p1.x+t*t*p2.x,
-  y:(1-t)*(1-t)*p0.y+2*(1-t)*t*p1.y+t*t*p2.y
- };
+return {
+x:(1-t)*(1-t)*p0.x+2*(1-t)*t*p1.x+t*t*p2.x,
+y:(1-t)*(1-t)*p0.y+2*(1-t)*t*p1.y+t*t*p2.y
+};
 }
 
 function placeArc(){
- let n=parseInt(document.getElementById("arcN").value)||8;
- for(let i=0;i<n;i++){
-  let t=i/(n-1);
-  let p=bez(arcPts[0],arcPts[1],arcPts[2],t);
-  addChair(p.x-13,p.y-13);
- }
- arcPts=[];
- render();
+let n=parseInt(document.getElementById("arcN").value)||8;
+for(let i=0;i<n;i++){
+let t=i/(n-1);
+let p=bez(arcPts[0],arcPts[1],arcPts[2],t);
+addChair(p.x,p.y);
+}
+arcPts=[];
 }
 
-// ===== stage =====
-stage.onclick=e=>{
- let r=stage.getBoundingClientRect();
- let x=snap(e.clientX-r.left);
- let y=snap(e.clientY-r.top);
+// ===== PDF =====
+function loadPDF(){
+let i=document.createElement("input");
+i.type="file";i.accept=".pdf";
 
- if(tool==="chair"){addChair(x,y);render();}
+i.onchange=e=>{
+let f=e.target.files[0];
+let r=new FileReader();
 
- if(tool==="arc"){
-  arcPts.push({x,y});
-  if(arcPts.length===3) placeArc();
- }
+r.onload=ev=>{
+pdfjsLib.getDocument({data:new Uint8Array(ev.target.result)})
+.promise.then(pdf=>{
+pdf.getPage(1).then(p=>{
+
+let v=p.getViewport({scale:1});
+
+let c=document.getElementById("bg");
+let ctx=c.getContext("2d");
+
+// ★スケール計算
+pdfScale=Math.min(
+stage.clientWidth/v.width,
+stage.clientHeight/v.height
+);
+
+let sv=p.getViewport({scale:pdfScale});
+
+c.width=sv.width;
+c.height=sv.height;
+
+stage.style.width=sv.width+"px";
+stage.style.height=sv.height+"px";
+
+p.render({canvasContext:ctx,viewport:sv});
+
+updateGrid();
+});
+});
 };
 
-// ===== 読み込み =====
-function loadPDF(){
- let i=document.createElement("input");i.type="file";i.accept=".pdf";
- i.onchange=e=>{
-  let f=e.target.files[0];
-  let r=new FileReader();
-  r.onload=ev=>{
-   pdfjsLib.getDocument({data:new Uint8Array(ev.target.result)}).promise.then(pdf=>{
-    pdf.getPage(1).then(p=>{
-     let v=p.getViewport({scale:1});
-     let c=document.getElementById("bg");
-     let ctx=c.getContext("2d");
-     c.width=v.width;c.height=v.height;
-     p.render({canvasContext:ctx,viewport:v});
-    });
-   });
-  };
-  r.readAsArrayBuffer(f);
- };
- i.click();
+r.readAsArrayBuffer(f);
+};
+i.click();
 }
 
+// ===== IMG =====
 function loadImg(){
- let i=document.createElement("input");i.type="file";
- i.onchange=e=>{
-  let img=new Image();
-  img.onload=()=>{
-   let c=document.getElementById("bg");
-   let ctx=c.getContext("2d");
-   c.width=img.width;c.height=img.height;
-   ctx.drawImage(img,0,0);
-  };
-  img.src=URL.createObjectURL(e.target.files[0]);
- };
- i.click();
+let i=document.createElement("input");
+i.type="file";
+
+i.onchange=e=>{
+let img=new Image();
+img.onload=()=>{
+let c=document.getElementById("bg");
+let ctx=c.getContext("2d");
+
+c.width=img.width;
+c.height=img.height;
+
+stage.style.width=img.width+"px";
+stage.style.height=img.height+"px";
+
+ctx.drawImage(img,0,0);
+updateGrid();
+};
+img.src=URL.createObjectURL(e.target.files[0]);
+};
+i.click();
 }
 
 // ===== export =====
 function exportPNG(){
- html2canvas(stage).then(c=>{
-  let a=document.createElement("a");
-  a.href=c.toDataURL();
-  a.download="stage.png";
-  a.click();
- });
+html2canvas(stage).then(c=>{
+let a=document.createElement("a");
+a.href=c.toDataURL();
+a.download="stage_v14.png";
+a.click();
+});
 }
 
+// ===== tool =====
 function setTool(t){
- tool=t;
- document.getElementById("arcUI").style.display=(t==="arc")?"block":"none";
+tool=t;
+document.getElementById("arcUI").style.display=
+t==="arc"?"block":"none";
 }
 
 render();
-
 </script>
 
 </body>
