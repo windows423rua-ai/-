@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+	<title></title>
+	<meta name="generator" content="LibreOffice 7.4.7.2 (Linux)"/>
+	<meta name="created" content="00:00:00"/>
+	<meta name="changed" content="00:00:00"/>
+	<style type="text/css">
+		@page { size: 8.27in 11.69in; margin: 0.79in }
+		p { line-height: 115%; margin-bottom: 0.1in; background: transparent }
+		pre { background: transparent }
+		pre.western { font-family: "Liberation Mono", monospace; font-size: 10pt }
+		pre.cjk { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 10pt }
+		pre.ctl { font-family: "Liberation Mono", monospace; font-size: 10pt }
+	</style>
+</head>
+<body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><pre class="western">
+&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ja&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;<font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">舞台配置図 </span></font>v13.5&lt;/title&gt;
+
+&lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js&quot;&gt;&lt;/script&gt;
+
+&lt;style&gt;
+body {margin:0;display:flex;height:100vh;font-family:sans-serif;background:#e8e6df;touch-action:none;}
+
+#sidebar {width:200px;background:white;border-right:1px solid #ccc;display:flex;flex-direction:column;}
+
+.tabs {display:flex;}
+.tab {flex:1;padding:6px;text-align:center;border-bottom:2px solid transparent;cursor:pointer;font-size:12px;}
+.tab.active {border-color:#1d9e75;color:#1d9e75;font-weight:bold;}
+
+.inst-list {flex:1;overflow:auto;}
+.inst {padding:6px;font-size:12px;border-bottom:1px solid #eee;cursor:pointer;}
+.inst.active {background:#1d9e75;color:white;}
+
+#main {flex:1;display:flex;flex-direction:column;}
+
+#toolbar {padding:6px;background:white;border-bottom:1px solid #ccc;display:flex;flex-wrap:wrap;gap:6px;}
+button {padding:6px;}
+
+#stage {width:960px;height:760px;margin:auto;position:relative;background:white;border:1px solid #aaa;}
+
+.stage-grid {
+position:absolute;inset:0;
+background-image:
+linear-gradient(rgba(0,0,0,0.05) 1px,transparent 1px),
+linear-gradient(90deg,rgba(0,0,0,0.05) 1px,transparent 1px);
+background-size:30px 30px;
+}
+
+.elem {position:absolute;}
+.chair {
+width:26px;height:26px;border-radius:50%;
+border:2px solid;
+display:flex;align-items:center;justify-content:center;
+font-size:8px;background:white;
+}
+
+.scale {position:absolute;bottom:10px;right:10px;font-size:10px;background:white;padding:4px;border:1px solid #ccc;}
+
+#arcUI {position:absolute;top:60px;left:220px;background:white;padding:6px;border:1px solid #ccc;}
+&lt;/style&gt;
+&lt;/head&gt;
+
+&lt;body&gt;
+
+&lt;div id=&quot;sidebar&quot;&gt;
+&lt;div class=&quot;tabs&quot;&gt;
+&lt;div class=&quot;tab active&quot; onclick=&quot;switchTab('main',this)&quot;&gt;<font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">メイン</span></font>&lt;/div&gt;
+&lt;div class=&quot;tab&quot; onclick=&quot;switchTab('other',this)&quot;&gt;<font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">その他</span></font>&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&quot;mainList&quot; class=&quot;inst-list&quot;&gt;&lt;/div&gt;
+&lt;div id=&quot;otherList&quot; class=&quot;inst-list&quot; style=&quot;display:none&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div id=&quot;main&quot;&gt;
+
+&lt;div id=&quot;toolbar&quot;&gt;
+&lt;button onclick=&quot;setTool('select')&quot;&gt;<font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">選択</span></font>&lt;/button&gt;
+&lt;button onclick=&quot;setTool('chair')&quot;&gt;<font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">椅子</span></font>&lt;/button&gt;
+&lt;button onclick=&quot;setTool('arc')&quot;&gt;<font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">弧配置</span></font>&lt;/button&gt;
+
+&lt;button onclick=&quot;loadPDF()&quot;&gt;PDF&lt;/button&gt;
+&lt;button onclick=&quot;loadImg()&quot;&gt;<font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">画像</span></font>&lt;/button&gt;
+
+&lt;button onclick=&quot;exportPNG()&quot;&gt;PNG&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;div id=&quot;stage&quot;&gt;
+&lt;canvas id=&quot;bg&quot;&gt;&lt;/canvas&gt;
+&lt;div class=&quot;stage-grid&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;scale&quot;&gt;1<font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">マス</span></font>=180cm&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div id=&quot;arcUI&quot; style=&quot;display:none&quot;&gt;
+<font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">椅子数 </span></font>&lt;input type=&quot;number&quot; id=&quot;arcN&quot; value=&quot;8&quot;&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;script&gt;
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ===== <font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">楽器 </span></font>=====
+const MAIN=[
+{l:&quot;Pic&quot;,c:&quot;#e35&quot;},{l:&quot;Fl&quot;,c:&quot;#e35&quot;},{l:&quot;Ob&quot;,c:&quot;#c44&quot;},
+{l:&quot;B♭Cl&quot;,c:&quot;#36a&quot;},{l:&quot;B.Cl&quot;,c:&quot;#36a&quot;},
+{l:&quot;A.Sax&quot;,c:&quot;#1a8&quot;},{l:&quot;T.Sax&quot;,c:&quot;#1a8&quot;},{l:&quot;B.Sax&quot;,c:&quot;#1a8&quot;},
+{l:&quot;Tp&quot;,c:&quot;#c70&quot;},{l:&quot;Tb&quot;,c:&quot;#a84&quot;},
+{l:&quot;Hr&quot;,c:&quot;#84a&quot;},{l:&quot;B.Tb&quot;,c:&quot;#a84&quot;},
+{l:&quot;Tu&quot;,c:&quot;#08a&quot;},{l:&quot;Eu&quot;,c:&quot;#08a&quot;},{l:&quot;Stb&quot;,c:&quot;#555&quot;}
+];
+
+const OTHER=[
+{l:&quot;Cor Angl.&quot;,c:&quot;#c44&quot;},
+{l:&quot;E♭Cl&quot;,c:&quot;#36a&quot;},
+{l:&quot;A.Cl&quot;,c:&quot;#36a&quot;},
+{l:&quot;CA.Cl&quot;,c:&quot;#36a&quot;},
+{l:&quot;CB.Cl&quot;,c:&quot;#36a&quot;},
+{l:&quot;S.Sax&quot;,c:&quot;#1a8&quot;},
+{l:&quot;PicTp&quot;,c:&quot;#c70&quot;},
+{l:&quot;CorTp&quot;,c:&quot;#c70&quot;}
+];
+
+let currentInst=MAIN[0];
+
+function build(list,id){
+ let el=document.getElementById(id);
+ list.forEach(i=&gt;{
+  let d=document.createElement(&quot;div&quot;);
+  d.className=&quot;inst&quot;;
+  d.textContent=i.l;
+  d.style.color=i.c;
+  d.onclick=()=&gt;{
+    currentInst=i;
+    document.querySelectorAll(&quot;.inst&quot;).forEach(x=&gt;x.classList.remove(&quot;active&quot;));
+    d.classList.add(&quot;active&quot;);
+  };
+  el.appendChild(d);
+ });
+}
+
+build(MAIN,&quot;mainList&quot;);
+build(OTHER,&quot;otherList&quot;);
+document.querySelector(&quot;.inst&quot;).classList.add(&quot;active&quot;);
+
+function switchTab(n,el){
+ document.querySelectorAll(&quot;.tab&quot;).forEach(t=&gt;t.classList.remove(&quot;active&quot;));
+ el.classList.add(&quot;active&quot;);
+ document.getElementById(&quot;mainList&quot;).style.display=n===&quot;main&quot;?&quot;&quot;:&quot;none&quot;;
+ document.getElementById(&quot;otherList&quot;).style.display=n===&quot;other&quot;?&quot;&quot;:&quot;none&quot;;
+}
+
+// ===== core =====
+const GRID=30;
+let elements=[];
+let tool=&quot;select&quot;;
+let id=0;
+let arcPts=[];
+
+function snap(v){return Math.round(v/GRID)*GRID;}
+
+function addChair(x,y){
+ elements.push({x,y,label:currentInst.l,color:currentInst.c});
+}
+
+// ===== render =====
+function render(){
+ stage.querySelectorAll(&quot;.elem&quot;).forEach(e=&gt;e.remove());
+ elements.forEach(el=&gt;{
+  let d=document.createElement(&quot;div&quot;);
+  d.className=&quot;elem&quot;;
+  d.style.left=el.x+&quot;px&quot;;
+  d.style.top=el.y+&quot;px&quot;;
+
+  let c=document.createElement(&quot;div&quot;);
+  c.className=&quot;chair&quot;;
+  c.textContent=el.label;
+  c.style.borderColor=el.color;
+  c.style.color=el.color;
+
+  d.appendChild(c);
+  stage.appendChild(d);
+ });
+}
+
+// ===== <font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">弧 </span></font>=====
+function bez(p0,p1,p2,t){
+ return {
+  x:(1-t)*(1-t)*p0.x+2*(1-t)*t*p1.x+t*t*p2.x,
+  y:(1-t)*(1-t)*p0.y+2*(1-t)*t*p1.y+t*t*p2.y
+ };
+}
+
+function placeArc(){
+ let n=parseInt(document.getElementById(&quot;arcN&quot;).value)||8;
+ for(let i=0;i&lt;n;i++){
+  let t=i/(n-1);
+  let p=bez(arcPts[0],arcPts[1],arcPts[2],t);
+  addChair(p.x-13,p.y-13);
+ }
+ arcPts=[];
+ render();
+}
+
+// ===== stage =====
+stage.onclick=e=&gt;{
+ let r=stage.getBoundingClientRect();
+ let x=snap(e.clientX-r.left);
+ let y=snap(e.clientY-r.top);
+
+ if(tool===&quot;chair&quot;){addChair(x,y);render();}
+
+ if(tool===&quot;arc&quot;){
+  arcPts.push({x,y});
+  if(arcPts.length===3) placeArc();
+ }
+};
+
+// ===== <font face="Noto Sans Mono CJK SC, monospace"><span lang="zh-CN">読み込み </span></font>=====
+function loadPDF(){
+ let i=document.createElement(&quot;input&quot;);i.type=&quot;file&quot;;i.accept=&quot;.pdf&quot;;
+ i.onchange=e=&gt;{
+  let f=e.target.files[0];
+  let r=new FileReader();
+  r.onload=ev=&gt;{
+   pdfjsLib.getDocument({data:new Uint8Array(ev.target.result)}).promise.then(pdf=&gt;{
+    pdf.getPage(1).then(p=&gt;{
+     let v=p.getViewport({scale:1});
+     let c=document.getElementById(&quot;bg&quot;);
+     let ctx=c.getContext(&quot;2d&quot;);
+     c.width=v.width;c.height=v.height;
+     p.render({canvasContext:ctx,viewport:v});
+    });
+   });
+  };
+  r.readAsArrayBuffer(f);
+ };
+ i.click();
+}
+
+function loadImg(){
+ let i=document.createElement(&quot;input&quot;);i.type=&quot;file&quot;;
+ i.onchange=e=&gt;{
+  let img=new Image();
+  img.onload=()=&gt;{
+   let c=document.getElementById(&quot;bg&quot;);
+   let ctx=c.getContext(&quot;2d&quot;);
+   c.width=img.width;c.height=img.height;
+   ctx.drawImage(img,0,0);
+  };
+  img.src=URL.createObjectURL(e.target.files[0]);
+ };
+ i.click();
+}
+
+// ===== export =====
+function exportPNG(){
+ html2canvas(stage).then(c=&gt;{
+  let a=document.createElement(&quot;a&quot;);
+  a.href=c.toDataURL();
+  a.download=&quot;stage.png&quot;;
+  a.click();
+ });
+}
+
+function setTool(t){
+ tool=t;
+ document.getElementById(&quot;arcUI&quot;).style.display=(t===&quot;arc&quot;)?&quot;block&quot;:&quot;none&quot;;
+}
+
+render();
+
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+</body>
+</html>
